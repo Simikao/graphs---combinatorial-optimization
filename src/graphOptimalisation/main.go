@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -119,6 +120,15 @@ func (g *Graph) GetEvenOddDegreeCounts() (evenCount, oddCount int) {
 	return evenCount, oddCount
 }
 
+func (g *Graph) SortedByDegrees() []int {
+	degrees := make([]int, len(g.adjMatrix))
+	for i := range g.adjMatrix {
+		degrees[i] = g.GetDegree(i + 1)
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(degrees)))
+	return degrees
+}
+
 func (g *Graph) String() string {
 	var output []string
 
@@ -219,5 +229,6 @@ func main() {
 	fmt.Println(graph2.GetEvenOddDegreeCounts())
 	fmt.Println(graph.GetMinMaxDegree())
 	fmt.Println(graph2.GetMinMaxDegree())
+	fmt.Println(graph.SortedByDegrees())
 	// graph.ToDOT("test.dot")
 }
