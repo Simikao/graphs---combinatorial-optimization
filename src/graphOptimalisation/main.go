@@ -66,7 +66,7 @@ func (g *Graph) RemoveVertex(v int) {
 	}
 }
 
-func (g *Graph) OutDegree(v int) int {
+func (g *Graph) GetOutDegree(v int) int {
 	v--
 	degree := 0
 	for i := range g.adjMatrix[v] {
@@ -75,7 +75,7 @@ func (g *Graph) OutDegree(v int) int {
 	return degree
 }
 
-func (g *Graph) InDegree(v int) int {
+func (g *Graph) GetInDegree(v int) int {
 	v--
 	degree := 0
 	for i := range g.adjMatrix {
@@ -84,13 +84,13 @@ func (g *Graph) InDegree(v int) int {
 	return degree
 }
 
-func (g *Graph) getDegree(v int) int {
+func (g *Graph) GetDegree(v int) int {
 	// given the fact that we pass this vertex to further function
 	// we do not want to lower its value here to prevent doing it twice
 	if g.directed {
-		return g.InDegree(v) + g.OutDegree(v)
+		return g.GetInDegree(v) + g.GetOutDegree(v)
 	}
-	return g.OutDegree(v)
+	return g.GetOutDegree(v)
 }
 
 func (g *Graph) String() string {
@@ -183,10 +183,10 @@ func main() {
 	graph.RemoveEdge(1, 3)
 	graph.AddEdge(3, 1)
 	fmt.Println(graph)
-	fmt.Println(graph.InDegree(1))
-	fmt.Println(graph.OutDegree(1))
+	fmt.Println(graph.GetInDegree(1))
+	fmt.Println(graph.GetOutDegree(1))
 	graph2.AddEdge(1, 2)
 	graph2.AddEdge(2, 3)
-	fmt.Println(graph2.getDegree(3))
+	fmt.Println(graph2.GetDegree(3))
 	// graph.ToDOT("test.dot")
 }
