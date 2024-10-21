@@ -108,6 +108,17 @@ func (g *Graph) GetMinMaxDegree() (minDegree, maxDegree int) {
 	return minDegree, maxDegree
 }
 
+func (g *Graph) GetEvenOddDegreeCounts() (evenCount, oddCount int) {
+	for i := 1; i <= len(g.adjMatrix); i++ {
+		if g.GetDegree(i)%2 == 0 {
+			evenCount++
+		} else {
+			oddCount++
+		}
+	}
+	return evenCount, oddCount
+}
+
 func (g *Graph) String() string {
 	var output []string
 
@@ -202,7 +213,10 @@ func main() {
 	fmt.Println(graph.GetOutDegree(1))
 	graph2.AddEdge(1, 2)
 	graph2.AddEdge(2, 3)
+	fmt.Println(graph2.GetDegree(1))
+	fmt.Println(graph2.GetDegree(2))
 	fmt.Println(graph2.GetDegree(3))
+	fmt.Println(graph2.GetEvenOddDegreeCounts())
 	fmt.Println(graph.GetMinMaxDegree())
 	fmt.Println(graph2.GetMinMaxDegree())
 	// graph.ToDOT("test.dot")
