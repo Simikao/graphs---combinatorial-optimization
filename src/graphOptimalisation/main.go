@@ -23,6 +23,26 @@ func NewGraph(vertices int, directed bool) *Graph {
 	}
 }
 
+func (g *Graph) AddEdge(u, v int) {
+	u = u - 1
+	v = v - 1
+
+	g.adjMatrix[u][v] = 1
+	if !g.directed {
+		g.adjMatrix[v][u] = 1
+	}
+}
+
+func (g *Graph) RemoveEdge(u, v int) {
+	u -= 1
+	v -= 1
+
+	g.adjMatrix[u][v] = 0
+	if !g.directed {
+		g.adjMatrix[v][u] = 0
+	}
+}
+
 func (g *Graph) String() string {
 	var output []string
 
@@ -44,7 +64,9 @@ func (g *Graph) String() string {
 
 // Eksport grafu do formatu .dot (Graphviz)
 func (g *Graph) ToDOT(filename string) error {
-	file, err := os.Create(filename)
+	path := fmt.Sprintf("../../out/%s", filename)
+
+	file, err := os.Create(path)
 	if err != nil {
 		return err
 	}
@@ -88,8 +110,12 @@ func main() {
 		directed: true,
 	}
 
-	graph2 := NewGraph(2, false)
-	fmt.Println(graph2)
 	fmt.Println(graph)
-	graph.ToDOT("test.dot")
+	graph2 := NewGraph(4, false)
+	graph2.AddEdge(2, 3)
+	graph2.AddEdge(1, 3)
+	fmt.Println(graph2)
+	graph2.RemoveEdge(2, 3)
+	fmt.Println(graph2)
+	// graph.ToDOT("test.dot")
 }
