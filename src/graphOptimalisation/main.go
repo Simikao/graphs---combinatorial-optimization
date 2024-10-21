@@ -136,10 +136,12 @@ func (g *Graph) ToDOT(filename string) error {
 	for i := range g.adjMatrix {
 		for j := range g.adjMatrix[i] {
 			if g.adjMatrix[i][j] == 1 {
+				indexingFixI := i + 1
+				indexingFixJ := j + 1
 				if g.directed {
-					fmt.Fprintf(file, "  %d -> %d;\n", i, j)
+					fmt.Fprintf(file, "  %d -> %d;\n", indexingFixI, indexingFixJ)
 				} else if i <= j { // aby uniknąć powielania krawędzi w grafie nieskierowanym
-					fmt.Fprintf(file, "  %d -- %d;\n", i, j)
+					fmt.Fprintf(file, "  %d -- %d;\n", indexingFixI, indexingFixJ)
 				}
 			}
 		}
