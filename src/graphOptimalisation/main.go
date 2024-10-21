@@ -93,6 +93,21 @@ func (g *Graph) GetDegree(v int) int {
 	return g.GetOutDegree(v)
 }
 
+func (g *Graph) GetMinMaxDegree() (minDegree, maxDegree int) {
+	minDegree = g.GetDegree(1)
+	maxDegree = g.GetDegree(1)
+	for i := 1; i <= len(g.adjMatrix); i++ {
+		degree := g.GetDegree(i)
+		if degree < minDegree {
+			minDegree = degree
+		}
+		if degree > maxDegree {
+			maxDegree = degree
+		}
+	}
+	return minDegree, maxDegree
+}
+
 func (g *Graph) String() string {
 	var output []string
 
@@ -188,5 +203,7 @@ func main() {
 	graph2.AddEdge(1, 2)
 	graph2.AddEdge(2, 3)
 	fmt.Println(graph2.GetDegree(3))
+	fmt.Println(graph.GetMinMaxDegree())
+	fmt.Println(graph2.GetMinMaxDegree())
 	// graph.ToDOT("test.dot")
 }
