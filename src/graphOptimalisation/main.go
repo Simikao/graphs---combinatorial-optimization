@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -188,6 +190,96 @@ func (g *Graph) ToDOT(filename string) error {
 	return nil
 }
 
+func LoadGraphFromFile(filename string, directed bool) (*Graph, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var edges [][]int
+	var maxVertex int
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.Fields(line)
+		if len(parts) != 2 {
+			continue
+		}
+		u, err1 := strconv.Atoi(parts[0])
+		v, err2 := strconv.Atoi(parts[1])
+		if err1 != nil || err2 != nil {
+			return nil, fmt.Errorf("błąd formatu pliku")
+		}
+		edges = append(edges, []int{u, v})
+		if u > maxVertex {
+			maxVertex = u
+		}
+		if v > maxVertex {
+			maxVertex = v
+		}
+	}
+
+	graph := NewGraph(maxVertex, directed)
+
+	for _, edge := range edges {
+		graph.AddEdge(edge[0], edge[1])
+	}
+
+	return graph, nil
+}
+
+func LoadGraphFromDotFile(filename string) (*Graph, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var edges [][]int
+	var maxVertex int
+	directed := false
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		// Checking if the graph is directed
+		if strings.HasPrefix(line, "digraph") {
+			directed = true
+		}
+
+		if strings.Contains(line, "->") || strings.Contains(line, "--") {
+			parts := strings.FieldsFunc(line, func(r rune) bool {
+				return r == '-' || r == '>' || r == ';'
+			})
+			if len(parts) >= 2 {
+				u, err1 := strconv.Atoi(strings.TrimSpace(parts[0]))
+				v, err2 := strconv.Atoi(strings.TrimSpace(parts[1]))
+				if err1 != nil || err2 != nil {
+					return nil, fmt.Errorf("błąd formatu pliku .dot")
+				}
+				edges = append(edges, []int{u, v})
+				if u > maxVertex {
+					maxVertex = u
+				}
+				if v > maxVertex {
+					maxVertex = v
+				}
+			}
+		}
+	}
+
+	graph := NewGraph(maxVertex, directed)
+
+	for _, edge := range edges {
+		graph.AddEdge(edge[0], edge[1])
+	}
+
+	return graph, nil
+}
+
 func main() {
 	graph := &Graph{
 		adjMatrix: [][]int{
@@ -230,5 +322,10 @@ func main() {
 	fmt.Println(graph.GetMinMaxDegree())
 	fmt.Println(graph2.GetMinMaxDegree())
 	fmt.Println(graph.SortedByDegrees())
+	graph3, err := LoadGraphFromDotFile("../../out/test.dot")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(graph3)
 	// graph.ToDOT("test.dot")
 }
