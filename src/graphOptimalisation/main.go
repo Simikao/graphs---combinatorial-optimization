@@ -66,6 +66,33 @@ func (g *Graph) RemoveVertex(v int) {
 	}
 }
 
+func (g *Graph) OutDegree(v int) int {
+	v--
+	degree := 0
+	for i := range g.adjMatrix[v] {
+		degree += g.adjMatrix[v][i]
+	}
+	return degree
+}
+
+func (g *Graph) InDegree(v int) int {
+	v--
+	degree := 0
+	for i := range g.adjMatrix {
+		degree += g.adjMatrix[i][v]
+	}
+	return degree
+}
+
+func (g *Graph) getDegree(v int) int {
+	// given the fact that we pass this vertex to further function
+	// we do not want to lower its value here to prevent doing it twice
+	if g.directed {
+		return g.InDegree(v) + g.OutDegree(v)
+	}
+	return g.OutDegree(v)
+}
+
 func (g *Graph) String() string {
 	var output []string
 
@@ -154,5 +181,10 @@ func main() {
 	graph.RemoveEdge(1, 3)
 	graph.AddEdge(3, 1)
 	fmt.Println(graph)
+	fmt.Println(graph.InDegree(1))
+	fmt.Println(graph.OutDegree(1))
+	graph2.AddEdge(1, 2)
+	graph2.AddEdge(2, 3)
+	fmt.Println(graph2.getDegree(3))
 	// graph.ToDOT("test.dot")
 }
