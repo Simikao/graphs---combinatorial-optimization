@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	// "github.com/jesseduffield/lazygit/pkg/gui/presentation/graph"
 )
 
 type Graph struct {
@@ -40,6 +39,30 @@ func (g *Graph) RemoveEdge(u, v int) {
 	g.adjMatrix[u][v] = 0
 	if !g.directed {
 		g.adjMatrix[v][u] = 0
+	}
+}
+
+func (g *Graph) AddVertex() {
+	for i := range g.adjMatrix {
+		g.adjMatrix[i] = append(g.adjMatrix[i], 0)
+	}
+	newRow := make([]int, len(g.adjMatrix)+1)
+	g.adjMatrix = append(g.adjMatrix, newRow)
+}
+
+func (g *Graph) RemoveVertex(v int) {
+	v -= 1
+	// check if the vertex exists
+	if v >= len(g.adjMatrix) {
+		return
+	}
+
+	// removing a row
+	g.adjMatrix = append(g.adjMatrix[:v], g.adjMatrix[v+1:]...)
+
+	// removing a column
+	for i := range g.adjMatrix {
+		g.adjMatrix[i] = append(g.adjMatrix[i][:v], g.adjMatrix[i][v+1:]...)
 	}
 }
 
@@ -117,5 +140,19 @@ func main() {
 	fmt.Println(graph2)
 	graph2.RemoveEdge(2, 3)
 	fmt.Println(graph2)
+
+	fmt.Println("Vertexes")
+	graph2.AddVertex()
+	fmt.Println(graph2)
+	graph2.AddEdge(3, 5)
+	fmt.Println(graph2)
+	graph2.RemoveVertex(5)
+	fmt.Println(graph2)
+	graph2.RemoveVertex(3)
+	fmt.Println(graph2)
+
+	graph.RemoveEdge(1, 3)
+	graph.AddEdge(3, 1)
+	fmt.Println(graph)
 	// graph.ToDOT("test.dot")
 }
