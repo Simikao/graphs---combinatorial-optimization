@@ -10,12 +10,33 @@ import (
 type Graph struct {
 	AdjMatrix [][]int
 	Directed  bool
+	Edges     [][2]int
+}
+
+func getEdges(vertices [][]int, directed bool) [][2]int {
+	var edges [][2]int
+	for i := range vertices {
+		for j := range vertices[i] {
+			if vertices[i][j] == 1 {
+				if directed {
+					edges = append(edges, [2]int{i + 1, j + 1})
+				} else {
+					if i <= j {
+						edges = append(edges, [2]int{i + 1, j + 1})
+					}
+				}
+			}
+		}
+	}
+	return edges
 }
 
 func NewGraphWithMatrix(vertices [][]int, directed bool) Graph {
+	edges := getEdges(vertices, directed)
 	return Graph{
 		AdjMatrix: vertices,
 		Directed:  directed,
+		Edges:     edges,
 	}
 }
 
@@ -24,10 +45,16 @@ func NewGraph(vertices int, directed bool) Graph {
 	for i := range matrix {
 		matrix[i] = make([]int, vertices)
 	}
+	edges := getEdges(matrix, directed)
 	return Graph{
 		AdjMatrix: matrix,
 		Directed:  directed,
+		Edges:     edges,
 	}
+}
+
+func (g *Graph) UpdateEdges() {
+	g.Edges = getEdges(g.AdjMatrix, g.Directed)
 }
 
 func (g *Graph) AddEdge(u, v int) *Graph {
@@ -38,6 +65,9 @@ func (g *Graph) AddEdge(u, v int) *Graph {
 	if !g.Directed {
 		g.AdjMatrix[v][u] = 1
 	}
+
+	// Update the list of edges with new edge
+	g.Edges = append(g.Edges, [2]int{u + 1, v + 1})
 	return g
 }
 
@@ -48,6 +78,13 @@ func (g *Graph) RemoveEdge(u, v int) *Graph {
 	g.AdjMatrix[u][v] = 0
 	if !g.Directed {
 		g.AdjMatrix[v][u] = 0
+	}
+	// Remove the edge from edge slice as well
+	for i, edge := range g.Edges {
+		if (edge[0] == u+1 && edge[1] == v+1) || (!g.Directed && edge[0] == v+1 && edge[1] == u+1) {
+			g.Edges = append(g.Edges[:i], g.Edges[i+1:]...)
+			break
+		}
 	}
 	return g
 }
@@ -75,6 +112,16 @@ func (g *Graph) RemoveVertex(v int) *Graph {
 	for i := range g.AdjMatrix {
 		g.AdjMatrix[i] = append(g.AdjMatrix[i][:v], g.AdjMatrix[i][v+1:]...)
 	}
+
+	// Update edges of the graf by removing all edges with the removed vertex from the list
+	var updatedEdges [][2]int
+	for _, edge := range g.Edges {
+		if edge[0] != v+1 && edge[1] != v+1 {
+			updatedEdges = append(updatedEdges, edge)
+		}
+	}
+	g.Edges = updatedEdges
+
 	return g
 }
 
