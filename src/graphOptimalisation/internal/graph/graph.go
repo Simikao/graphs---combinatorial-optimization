@@ -1,11 +1,14 @@
 package graph
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
 )
+
+var ErrDirectedGraph = errors.New("Cannot use a directed graph in this algorithm")
 
 type Graph struct {
 	AdjMatrix [][]int
@@ -46,6 +49,14 @@ func NewGraph(vertices int, directed bool) Graph {
 		matrix[i] = make([]int, vertices)
 	}
 	edges := getEdges(matrix, directed)
+	return Graph{
+		AdjMatrix: matrix,
+		Directed:  directed,
+		Edges:     edges,
+	}
+}
+
+func internalNewGraph(matrix [][]int, directed bool, edges [][2]int) Graph {
 	return Graph{
 		AdjMatrix: matrix,
 		Directed:  directed,
@@ -113,7 +124,7 @@ func (g *Graph) RemoveVertex(v int) *Graph {
 		g.AdjMatrix[i] = append(g.AdjMatrix[i][:v], g.AdjMatrix[i][v+1:]...)
 	}
 
-	// Update edges of the graf by removing all edges with the removed vertex from the list
+	// Update edges of the graph by removing all edges with the removed vertex from the list
 	var updatedEdges [][2]int
 	for _, edge := range g.Edges {
 		if edge[0] != v+1 && edge[1] != v+1 {
@@ -185,6 +196,57 @@ func (g *Graph) SortedByDegrees() []int {
 	}
 	sort.Sort(sort.Reverse(sort.IntSlice(degrees)))
 	return degrees
+}
+
+func (g *Graph) ApproximateVertexCover(logs *string) ([]int, error) {
+	errWrap := func(err error) error {
+		return fmt.Errorf("ApproximateVertexCover: %w", err)
+	}
+	var doLogs bool
+	if logs != nil {
+		doLogs = true
+	}
+
+	if g.Directed {
+		return nil, errWrap(ErrDirectedGraph)
+	}
+	var log strings.Builder
+	tempGraph := internalNewGraph(g.AdjMatrix, g.Directed, g.Edges)
+	cover := make(map[int]struct{})
+
+	// Step 1: while there are edges in graph...
+	for len(tempGraph.Edges) > 0 {
+		// pick an edge
+		edge := tempGraph.Edges[0]
+		u, v := edge[0], edge[1]
+		// Step 2: save two vertices of the chosen edge
+		cover[u] = struct{}{}
+		cover[v] = struct{}{}
+
+		if doLogs {
+			log.WriteString(fmt.Sprintf("Adding vertices %d and %d to the cover and removing them from the clone.\n", u, v))
+		}
+
+		// Step 3: remove both endpoints and their adjecent edges
+		tempGraph.RemoveVertex(u)
+		tempGraph.RemoveVertex(v)
+		if doLogs {
+			log.WriteString(fmt.Sprintf("Current cover set: %v\n", cover))
+			log.WriteString(fmt.Sprintf("Remaining edges after removal: %v\n", tempGraph.Edges))
+		}
+
+	}
+
+	result := make([]int, 0, len(cover))
+	for vertex := range cover {
+		result = append(result, vertex)
+	}
+
+	if doLogs {
+		log.WriteString(fmt.Sprintf("Approximate Vertex Cover: %v\n", result))
+		*logs = log.String()
+	}
+	return result, nil
 }
 
 func (g *Graph) String() string {

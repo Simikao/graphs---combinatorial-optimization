@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -111,14 +112,28 @@ func main() {
 		{1, 1, 0},
 		{0, 0, 1},
 	}, true)
-	graph.Inspect()
+	graph.UpdateEdges()
+	graph.Inspect().
+		RemoveEdge(3, 1)
+	fmt.Println(graph.Edges)
 
 	graph2 := g.NewGraph(4, false)
 	graph2.AddEdge(2, 3).
 		AddEdge(1, 3).
+		AddEdge(2, 2).
+		AddEdge(4, 1).
 		Inspect().
 		RemoveEdge(2, 3).
 		Inspect()
+	fmt.Println(graph2.Edges)
+	graph2.AddEdge(2, 3)
+	fmt.Println(graph2.Edges)
+	graph2.RemoveEdge(2, 3).
+		Inspect()
+	fmt.Println(graph2.Edges)
+	graph2.RemoveEdge(3, 1).
+		Inspect()
+	fmt.Println(graph2.Edges)
 
 	fmt.Println("Vertexes")
 	graph2.AddVertex().
@@ -148,5 +163,45 @@ func main() {
 		panic(err)
 	}
 	graph3.Inspect()
+
+	graphTestApproxSmall, err := LoadGraphFromFile("../../in/smallUndirected.txt", false)
+	if err != nil {
+		panic(err)
+	}
+	graphTestApproxDir, err := LoadGraphFromFile("../../in/exDirected.txt", true)
+	if err != nil {
+		panic(err)
+	}
+	graphTestApproxBig, err := LoadGraphFromFile("../../in/largeUndirected.txt", false)
+	if err != nil {
+		panic(err)
+	}
+
+	var logs string
+	graphTestApproxSmall.Inspect().InspectEdges()
+	result, err := graphTestApproxSmall.ApproximateVertexCover(&logs)
+	if err != nil {
+		log.Println(err)
+	}
+	fmt.Println(result)
+	fmt.Println(logs)
+
+	logs = ""
+	graphTestApproxDir.Inspect().InspectEdges()
+	result, err = graphTestApproxDir.ApproximateVertexCover(&logs)
+	if err != nil {
+		log.Println(err)
+	}
+	fmt.Println(result)
+	fmt.Println(logs)
+
+	logs = ""
+	graphTestApproxBig.Inspect().InspectEdges()
+	result, err = graphTestApproxBig.ApproximateVertexCover(&logs)
+	if err != nil {
+		log.Println(err)
+	}
+	fmt.Println(result)
+	fmt.Println(logs)
 	// graph.ToDOT("test.dot")
 }
