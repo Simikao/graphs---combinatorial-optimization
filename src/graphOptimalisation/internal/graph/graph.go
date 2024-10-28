@@ -247,6 +247,7 @@ func (g *Graph) ApproximateVertexCover(logs *string) ([]int, error) {
 	for vertex := range cover {
 		result = append(result, vertex)
 	}
+	sort.Ints(result)
 
 	if doLogs {
 		log.WriteString(fmt.Sprintf("Approximate Vertex Cover: %v\n", result))
