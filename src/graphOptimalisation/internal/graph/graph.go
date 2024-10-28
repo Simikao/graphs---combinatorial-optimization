@@ -211,13 +211,13 @@ func (g *Graph) ApproximateVertexCover(logs *string) ([]int, error) {
 		return nil, errWrap(ErrDirectedGraph)
 	}
 	var log strings.Builder
-	tempGraph := internalNewGraph(g.AdjMatrix, g.Directed, g.Edges)
+	edgesInternal := g.Edges
 	cover := make(map[int]struct{})
 
 	// Step 1: while there are edges in graph...
-	for len(tempGraph.Edges) > 0 {
+	for len(edgesInternal) > 0 {
 		// pick an edge
-		edge := tempGraph.Edges[0]
+		edge := edgesInternal[0]
 		u, v := edge[0], edge[1]
 		// Step 2: save two vertices of the chosen edge
 		cover[u] = struct{}{}
@@ -228,11 +228,17 @@ func (g *Graph) ApproximateVertexCover(logs *string) ([]int, error) {
 		}
 
 		// Step 3: remove both endpoints and their adjecent edges
-		tempGraph.RemoveVertex(u)
-		tempGraph.RemoveVertex(v)
+		var updatedEdges [][2]int
+		for _, e := range edgesInternal {
+			if e[0] != u && e[0] != v && e[1] != u && e[1] != v {
+				updatedEdges = append(updatedEdges, e)
+			}
+		}
+
+		edgesInternal = updatedEdges
 		if doLogs {
 			log.WriteString(fmt.Sprintf("Current cover set: %v\n", cover))
-			log.WriteString(fmt.Sprintf("Remaining edges after removal: %v\n", tempGraph.Edges))
+			log.WriteString(fmt.Sprintf("Remaining edges after removal: %v\n", edgesInternal))
 		}
 
 	}
@@ -309,5 +315,10 @@ func (g *Graph) ToDOT(filename string) error {
 
 func (g *Graph) Inspect() *Graph {
 	fmt.Println(g)
+	return g
+}
+
+func (g *Graph) InspectEdges() *Graph {
+	fmt.Println(g.Edges)
 	return g
 }
