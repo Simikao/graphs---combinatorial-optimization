@@ -27,7 +27,7 @@ func LoadGraphFromFile(filename string, directed, weighted bool) (g.Graph, error
 	for scanner.Scan() {
 		line := scanner.Text()
 		parts := strings.Fields(line)
-		if len(parts) != 2 {
+		if len(parts) < 2 || (weighted && len(parts) < 3) {
 			continue
 		}
 
@@ -55,7 +55,7 @@ func LoadGraphFromFile(filename string, directed, weighted bool) (g.Graph, error
 		}
 	}
 
-	graph := g.NewGraph(maxVertex, directed, false)
+	graph := g.NewGraph(maxVertex, directed, weighted)
 	for _, edge := range edges {
 		graph.AddEdge(edge[0], edge[1])
 	}
@@ -130,7 +130,7 @@ func LoadGraphFromDotFile(filename string) (*g.Graph, error) {
 		}
 	}
 
-	graph := g.NewGraph(maxVertex, directed, false)
+	graph := g.NewGraph(maxVertex, directed, weighted)
 	for _, edge := range edges {
 		graph.AddEdge(edge[0], edge[1])
 	}
