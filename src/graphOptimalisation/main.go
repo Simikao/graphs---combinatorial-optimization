@@ -247,99 +247,122 @@ func main() {
 	// graph.ToDOT("test.dot")
 
 	// Test grafu nieskierowanego, ważonego
-	undirectedGraph := g.NewGraph(3, false, true)
-	undirectedGraph.AddEdge(1, 2, 4.5)
-	undirectedGraph.AddEdge(1, 3, 3.0)
-	undirectedGraph.AddEdge(2, 3, 2.5)
-	fmt.Println("Undirected Weighted Graph:")
-	fmt.Println(undirectedGraph.String())
-
-	// Testowanie metod
-	gottenWeight, err := undirectedGraph.GetWeight(1, 2)
-	if err != nil {
-		log.Fatalf(err.Error())
-	}
-	fmt.Println("Weight between 1 and 2:", gottenWeight)
-	undirectedGraph.RemoveEdge(1, 3)
-	fmt.Println("Graph after removing edge 1 -- 3:")
-	fmt.Println(undirectedGraph.String())
-
-	// Eksport do .dot
-	err = undirectedGraph.ToDOT("undirected_weighted.dot")
-	if err != nil {
-		log.Fatalf("Error exporting to DOT: %v", err)
-	}
-
-	// Test grafu skierowanego, ważonego
-	directedGraph := g.NewGraph(3, true, true)
-	directedGraph.AddEdge(1, 2, 5.0)
-	directedGraph.AddEdge(2, 3, 1.0)
-	directedGraph.AddEdge(3, 1, 2.0)
-	fmt.Println("Directed Weighted Graph:")
-	fmt.Println(directedGraph.String())
-
-	// Testowanie metod
-	gottenWeight, err = directedGraph.GetWeight(3, 1)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Weight between 3 and 1:", gottenWeight)
-	err = directedGraph.SetWeight(3, 1, 2.5)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Updated weight between 3 and 1:")
-	fmt.Println(directedGraph.GetWeight(3, 1))
-
-	// Eksport do .dot
-	err = directedGraph.ToDOT("directed_weighted.dot")
-	if err != nil {
-		log.Fatalf("Error exporting to DOT: %v", err)
-	}
-
-	// Testing Christofides for an undirected graph
+	// undirectedGraph := g.NewGraph(3, false, true)
+	// undirectedGraph.AddEdge(1, 2, 4.5)
+	// undirectedGraph.AddEdge(1, 3, 3.0)
+	// undirectedGraph.AddEdge(2, 3, 2.5)
+	// fmt.Println("Undirected Weighted Graph:")
+	// fmt.Println(undirectedGraph.String())
+	//
+	// // Testowanie metod
+	// gottenWeight, err := undirectedGraph.GetWeight(1, 2)
+	// if err != nil {
+	// 	log.Fatalf(err.Error())
+	// }
+	// fmt.Println("Weight between 1 and 2:", gottenWeight)
+	// undirectedGraph.RemoveEdge(1, 3)
+	// fmt.Println("Graph after removing edge 1 -- 3:")
+	// fmt.Println(undirectedGraph.String())
+	//
+	// // Eksport do .dot
+	// err = undirectedGraph.ToDOT("undirected_weighted.dot")
+	// if err != nil {
+	// 	log.Fatalf("Error exporting to DOT: %v", err)
+	// }
+	//
+	// // Test grafu skierowanego, ważonego
+	// directedGraph := g.NewGraph(3, true, true)
+	// directedGraph.AddEdge(1, 2, 5.0)
+	// directedGraph.AddEdge(2, 3, 1.0)
+	// directedGraph.AddEdge(3, 1, 2.0)
+	// fmt.Println("Directed Weighted Graph:")
+	// fmt.Println(directedGraph.String())
+	//
+	// // Testowanie metod
+	// gottenWeight, err = directedGraph.GetWeight(3, 1)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println("Weight between 3 and 1:", gottenWeight)
+	// err = directedGraph.SetWeight(3, 1, 2.5)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println("Updated weight between 3 and 1:")
+	// fmt.Println(directedGraph.GetWeight(3, 1))
+	//
+	// // Eksport do .dot
+	// err = directedGraph.ToDOT("directed_weighted.dot")
+	// if err != nil {
+	// 	log.Fatalf("Error exporting to DOT: %v", err)
+	// }
+	//
+	// // Testing Christofides for an undirected graph
+	// var logs string
+	// hamiltonianCycle, err := undirectedGraph.Christofides(&logs)
+	// if err != nil {
+	// 	fmt.Println("Error in Christofides algorithm:", err)
+	// } else {
+	// 	fmt.Println("Hamiltonian Cycle from Christofides algorithm:", hamiltonianCycle)
+	// 	fmt.Println("Logs from Christofides algorithm:")
+	// 	fmt.Println(logs)
+	// }
+	//
+	// // Ładowanie grafu metrycznego
+	// metricGraph, err := LoadGraphFromFile("../../in/graphChristMetric.txt", false, true)
+	// if err != nil {
+	// 	log.Fatalf("Error loading metric graph: %v", err)
+	// }
+	// fmt.Println("Metric graph loaded successfully:")
+	// metricGraph.Inspect()
+	// logs = ""
+	// hamiltonianCycle, err = metricGraph.Christofides(&logs)
+	// if err != nil {
+	// 	fmt.Println("Error in Christofides algorithm:", err)
+	// } else {
+	// 	fmt.Println("Hamiltonian Cycle from Christofides algorithm:", hamiltonianCycle)
+	// 	fmt.Println("Logs from Christofides algorithm:")
+	// 	fmt.Println(logs)
+	// }
+	// metricGraph.ToDOT("test.dot")
+	//
+	// // Ładowanie grafu nie-metrycznego
+	// nonMetricGraph, err := LoadGraphFromFile("../../in/graphChristNonMetric.txt", false, true)
+	// if err != nil {
+	// 	log.Fatalf("Error loading non-metric graph: %v", err)
+	// }
+	// fmt.Println("Non-metric graph loaded successfully:")
+	// nonMetricGraph.Inspect()
+	// logs = ""
+	// hamiltonianCycle, err = nonMetricGraph.Christofides(&logs)
+	// if err != nil {
+	// 	fmt.Println("Error in Christofides algorithm:", err)
+	// } else {
+	// 	fmt.Println("Hamiltonian Cycle from Christofides algorithm:", hamiltonianCycle)
+	// 	fmt.Println("Logs from Christofides algorithm:")
+	// 	fmt.Println(logs)
+	// }
 	var logs string
-	hamiltonianCycle, err := undirectedGraph.Christofides(&logs)
+	graph := g.NewGraph(5, false, true)
+	graph.AddEdge(1, 2, 4.0)
+	graph.AddEdge(1, 3, 7.0)
+	graph.AddEdge(1, 4, 9.0)
+	graph.AddEdge(2, 3, 5.0)
+	graph.AddEdge(2, 4, 7.0)
+	graph.AddEdge(2, 5, 6.0)
+	graph.AddEdge(3, 4, 6.0)
+	graph.AddEdge(3, 5, 8.0)
+	graph.AddEdge(4, 5, 4.0)
+	graph.Inspect()
+	logs = ""
+	circuit, cost, err := graph.ChinesePostmanProblem(&logs)
 	if err != nil {
-		fmt.Println("Error in Christofides algorithm:", err)
-	} else {
-		fmt.Println("Hamiltonian Cycle from Christofides algorithm:", hamiltonianCycle)
-		fmt.Println("Logs from Christofides algorithm:")
-		fmt.Println(logs)
+		fmt.Println("Error:", err)
+		return
 	}
 
-	// Ładowanie grafu metrycznego
-	metricGraph, err := LoadGraphFromFile("../../in/graphChristMetric.txt", false, true)
-	if err != nil {
-		log.Fatalf("Error loading metric graph: %v", err)
-	}
-	fmt.Println("Metric graph loaded successfully:")
-	metricGraph.Inspect()
-	logs = ""
-	hamiltonianCycle, err = metricGraph.Christofides(&logs)
-	if err != nil {
-		fmt.Println("Error in Christofides algorithm:", err)
-	} else {
-		fmt.Println("Hamiltonian Cycle from Christofides algorithm:", hamiltonianCycle)
-		fmt.Println("Logs from Christofides algorithm:")
-		fmt.Println(logs)
-	}
-	metricGraph.ToDOT("test.dot")
-
-	// Ładowanie grafu nie-metrycznego
-	nonMetricGraph, err := LoadGraphFromFile("../../in/graphChristNonMetric.txt", false, true)
-	if err != nil {
-		log.Fatalf("Error loading non-metric graph: %v", err)
-	}
-	fmt.Println("Non-metric graph loaded successfully:")
-	nonMetricGraph.Inspect()
-	logs = ""
-	hamiltonianCycle, err = nonMetricGraph.Christofides(&logs)
-	if err != nil {
-		fmt.Println("Error in Christofides algorithm:", err)
-	} else {
-		fmt.Println("Hamiltonian Cycle from Christofides algorithm:", hamiltonianCycle)
-		fmt.Println("Logs from Christofides algorithm:")
-		fmt.Println(logs)
-	}
+	fmt.Println("Chinese Postman Circuit:", circuit)
+	fmt.Println("Total Cost:", cost)
+	fmt.Println("Logs:")
+	fmt.Println(logs)
 }

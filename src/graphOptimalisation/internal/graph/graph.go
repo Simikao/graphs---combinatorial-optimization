@@ -416,6 +416,38 @@ func (g *Graph) isMetric() bool {
 	return true
 }
 
+func (g *Graph) GetCompletedWeightMatrix() [][]float64 {
+	n := len(g.WeightMatrix)
+
+	// Stwórz kopię WeightMatrix
+	dist := make([][]float64, n)
+	for i := range dist {
+		dist[i] = make([]float64, n)
+		for j := range dist[i] {
+			if i == j {
+				dist[i][j] = 0 // Odległość do siebie
+			} else if g.WeightMatrix[i][j] > 0 {
+				dist[i][j] = g.WeightMatrix[i][j] // Istniejąca waga
+			} else {
+				dist[i][j] = 1e9 // Brak krawędzi = "nieskończoność"
+			}
+		}
+	}
+
+	// Algorytm Floyd-Warshall
+	for k := 0; k < n; k++ {
+		for i := 0; i < n; i++ {
+			for j := 0; j < n; j++ {
+				if dist[i][j] > dist[i][k]+dist[k][j] {
+					dist[i][j] = dist[i][k] + dist[k][j]
+				}
+			}
+		}
+	}
+
+	return dist
+}
+
 func (g *Graph) Christofides(logs *string) ([]int, error) {
 	if !g.Weighted {
 		return nil, fmt.Errorf("Christofides algorithm requires a weighted graph")
@@ -431,6 +463,9 @@ func (g *Graph) Christofides(logs *string) ([]int, error) {
 
 	var log strings.Builder
 	doLogs := logs != nil
+
+	// Uzupełnij brakujące wagi
+	completeWeightMatrix := g.GetCompletedWeightMatrix()
 
 	// Minimalne drzewo rozpinające
 	if doLogs {
@@ -457,7 +492,7 @@ func (g *Graph) Christofides(logs *string) ([]int, error) {
 	if doLogs {
 		log.WriteString("Step 3: Finding minimum weight matching for odd-degree vertices.\n")
 	}
-	matching := g.FindMinimumWeightMatching(oddVertices, &log)
+	matching := g.FindMinimumWeightMatching(oddVertices, completeWeightMatrix, &log)
 	if doLogs {
 		log.WriteString(fmt.Sprintf("Matching edges: %v\n", matching))
 	}
@@ -498,7 +533,7 @@ func (g *Graph) FindOddDegreeVertices(edges [][2]int, logs *strings.Builder) []i
 	return oddVertices
 }
 
-func (g *Graph) FindMinimumWeightMatching(oddVertices []int, logs *strings.Builder) [][2]int {
+func (g *Graph) FindMinimumWeightMatching(oddVertices []int, weightMatrix [][]float64, logs *strings.Builder) [][2]int {
 	var matching [][2]int
 	visited := make(map[int]bool)
 
@@ -509,12 +544,18 @@ func (g *Graph) FindMinimumWeightMatching(oddVertices []int, logs *strings.Build
 
 		minWeight := 1e9
 		var bestMatch int
+		if logs != nil {
+			logs.WriteString(fmt.Sprintf("Processing vertex %d. Available pairs: %v\n", oddVertices[i], oddVertices[i+1:]))
+		}
 		for j := i + 1; j < len(oddVertices); j++ {
 			if visited[oddVertices[j]] {
 				continue
 			}
 
-			weight := g.WeightMatrix[oddVertices[i]-1][oddVertices[j]-1]
+			weight := weightMatrix[oddVertices[i]-1][oddVertices[j]-1]
+			if logs != nil {
+				logs.WriteString(fmt.Sprintf("Checking pair (%d, %d) with weight %.2f.\n", oddVertices[i], oddVertices[j], weight))
+			}
 			if weight < minWeight {
 				minWeight = weight
 				bestMatch = oddVertices[j]
@@ -640,7 +681,7 @@ func (g *Graph) KruskalMST(logs *strings.Builder) ([][2]int, error) {
 			uf.Union(e.u, e.v)
 			mstEdges = append(mstEdges, [2]int{e.u + 1, e.v + 1}) // Indeksy zaczynają się od 1
 			if logs != nil {
-				logs.WriteString(fmt.Sprintf("Added edge (%d, %d) with weight %.2f to MST.\n", e.u+1, e.v+1, e.weight))
+				logs.WriteString(fmt.Sprintf("Added edge (%d, %d) to MST.\n", e.u+1, e.v+1))
 			}
 		}
 
@@ -651,4 +692,96 @@ func (g *Graph) KruskalMST(logs *strings.Builder) ([][2]int, error) {
 	}
 
 	return mstEdges, nil
+}
+
+func (g *Graph) ChinesePostmanProblem(logs *string) ([]int, float64, error) {
+	var log strings.Builder
+	doLogs := logs != nil
+
+	if g.Directed {
+		return nil, 0, fmt.Errorf("problem chińskiego listonosza nie obsługuje grafów skierowanych")
+	}
+
+	// Uzupełnij brakujące wagi
+	completeWeightMatrix := g.GetCompletedWeightMatrix()
+	fmt.Println(completeWeightMatrix)
+
+	// Krok 1: Znajdź wierzchołki o nieparzystym stopniu
+	oddVertices := g.FindOddDegreeVertices(g.Edges, &log)
+	if len(oddVertices) == 0 && doLogs {
+		log.WriteString("Graf jest już Eulerowski.\n")
+	}
+
+	// Krok 2: Dopasowanie wierzchołków o nieparzystym stopniu
+	if len(oddVertices) > 0 {
+		if doLogs {
+			log.WriteString(fmt.Sprintf("Odd-degree vertices: %v\n", oddVertices))
+		}
+		matching := g.FindMinimumWeightMatching(oddVertices, completeWeightMatrix, &log)
+		for _, edge := range matching {
+			u, v := edge[0]-1, edge[1]-1
+			g.WeightMatrix[u][v] += g.WeightMatrix[u][v]
+			g.WeightMatrix[v][u] += g.WeightMatrix[v][u]
+			g.AdjMatrix[u][v]++
+			g.AdjMatrix[v][u]++
+			g.Edges = append(g.Edges, [2]int{u + 1, v + 1})
+
+			if doLogs {
+				log.WriteString(fmt.Sprintf("Added edge (%d, %d) with weight %.2f to the graph.\n", u+1, v+1, g.WeightMatrix[u][v]))
+				log.WriteString(fmt.Sprintf("Updated adjacency matrix: %v\n", g.AdjMatrix))
+				log.WriteString(fmt.Sprintf("Updated weight matrix:\n"))
+				for _, row := range g.WeightMatrix {
+					log.WriteString(fmt.Sprintf("%v\n", row))
+				}
+			}
+		}
+	}
+
+	// Krok 3: Znajdź cykl Eulera
+	eulerianCircuit := g.FleurysAlgorithm()
+	if doLogs {
+		log.WriteString(fmt.Sprintf("Eulerian circuit: %v\n", eulerianCircuit))
+	}
+
+	// Krok 4: Oblicz koszt
+	totalCost := 0.0
+	for i := 0; i < len(eulerianCircuit)-1; i++ {
+		u, v := eulerianCircuit[i]-1, eulerianCircuit[i+1]-1
+		totalCost += g.WeightMatrix[u][v]
+	}
+
+	if logs != nil {
+		*logs = log.String()
+	}
+
+	return eulerianCircuit, totalCost, nil
+}
+
+// Znajdowanie cyklu Eulera za pomocą algorytmu Fleury’ego
+func (g *Graph) FleurysAlgorithm() []int {
+	circuit := []int{}
+	current := 0 // Start od dowolnego wierzchołka
+	stack := []int{current}
+
+	for len(stack) > 0 {
+		node := stack[len(stack)-1]
+		hasEdges := false
+		for i := 0; i < len(g.AdjMatrix[node]); i++ {
+			if g.AdjMatrix[node][i] > 0 {
+				hasEdges = true
+				// Tymczasowe usunięcie krawędzi
+				g.AdjMatrix[node][i]--
+				g.AdjMatrix[i][node]--
+				stack = append(stack, i)
+				break
+			}
+		}
+		if !hasEdges {
+			// Nie ma krawędzi — dodaj wierzchołek do cyklu i zdejmij go ze stosu
+			circuit = append(circuit, stack[len(stack)-1]+1)
+			stack = stack[:len(stack)-1]
+		}
+	}
+
+	return circuit
 }
