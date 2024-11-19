@@ -296,4 +296,50 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error exporting to DOT: %v", err)
 	}
+
+	// Testing Christofides for an undirected graph
+	var logs string
+	hamiltonianCycle, err := undirectedGraph.Christofides(&logs)
+	if err != nil {
+		fmt.Println("Error in Christofides algorithm:", err)
+	} else {
+		fmt.Println("Hamiltonian Cycle from Christofides algorithm:", hamiltonianCycle)
+		fmt.Println("Logs from Christofides algorithm:")
+		fmt.Println(logs)
+	}
+
+	// Ładowanie grafu metrycznego
+	metricGraph, err := LoadGraphFromFile("../../in/graphChristMetric.txt", false, true)
+	if err != nil {
+		log.Fatalf("Error loading metric graph: %v", err)
+	}
+	fmt.Println("Metric graph loaded successfully:")
+	metricGraph.Inspect()
+	logs = ""
+	hamiltonianCycle, err = metricGraph.Christofides(&logs)
+	if err != nil {
+		fmt.Println("Error in Christofides algorithm:", err)
+	} else {
+		fmt.Println("Hamiltonian Cycle from Christofides algorithm:", hamiltonianCycle)
+		fmt.Println("Logs from Christofides algorithm:")
+		fmt.Println(logs)
+	}
+	metricGraph.ToDOT("test.dot")
+
+	// Ładowanie grafu nie-metrycznego
+	nonMetricGraph, err := LoadGraphFromFile("../../in/graphChristNonMetric.txt", false, true)
+	if err != nil {
+		log.Fatalf("Error loading non-metric graph: %v", err)
+	}
+	fmt.Println("Non-metric graph loaded successfully:")
+	nonMetricGraph.Inspect()
+	logs = ""
+	hamiltonianCycle, err = nonMetricGraph.Christofides(&logs)
+	if err != nil {
+		fmt.Println("Error in Christofides algorithm:", err)
+	} else {
+		fmt.Println("Hamiltonian Cycle from Christofides algorithm:", hamiltonianCycle)
+		fmt.Println("Logs from Christofides algorithm:")
+		fmt.Println(logs)
+	}
 }

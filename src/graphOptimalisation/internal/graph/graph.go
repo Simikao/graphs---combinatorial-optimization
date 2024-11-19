@@ -391,3 +391,264 @@ func (g *Graph) InspectEdges() *Graph {
 	fmt.Println(g.Edges)
 	return g
 }
+
+func (g *Graph) isMetric() bool {
+	for i := 0; i < len(g.WeightMatrix); i++ {
+		for j := 0; j < len(g.WeightMatrix); j++ {
+			if i == j || g.WeightMatrix[i][j] == 0 {
+				continue // Ignoruj przypadki, gdy i == j lub brak krawędzi
+			}
+			for k := 0; k < len(g.WeightMatrix); k++ {
+				if i == k || j == k || g.WeightMatrix[i][k] == 0 || g.WeightMatrix[k][j] == 0 {
+					continue // Ignoruj przypadki, gdy krawędzie są nieistniejące
+				}
+				// Sprawdź zasadę trójkąta
+				if g.WeightMatrix[i][j] > g.WeightMatrix[i][k]+g.WeightMatrix[k][j] {
+					// Debugowanie: Wypisz szczegóły naruszenia
+					fmt.Printf("Triangle inequality violated: d(%d, %d) = %.2f, d(%d, %d) + d(%d, %d) = %.2f\n",
+						i+1, j+1, g.WeightMatrix[i][j],
+						i+1, k+1, k+1, j+1, g.WeightMatrix[i][k]+g.WeightMatrix[k][j])
+					return false
+				}
+			}
+		}
+	}
+	return true
+}
+
+func (g *Graph) Christofides(logs *string) ([]int, error) {
+	if !g.Weighted {
+		return nil, fmt.Errorf("Christofides algorithm requires a weighted graph")
+	}
+	if g.Directed {
+		return nil, fmt.Errorf("Christofides algorithm requires an undirected graph")
+	}
+
+	// Warunek trójkąta
+	if !g.isMetric() {
+		return nil, fmt.Errorf("Graph does not satisfy the triangle inequality")
+	}
+
+	var log strings.Builder
+	doLogs := logs != nil
+
+	// Minimalne drzewo rozpinające
+	if doLogs {
+		log.WriteString("Step 1: Generating Minimum Spanning Tree (MST) using Kruskal's algorithm.\n")
+	}
+	mstEdges, err := g.KruskalMST(&log)
+	if err != nil {
+		return nil, err
+	}
+	if doLogs {
+		log.WriteString(fmt.Sprintf("MST Edges: %v\n", mstEdges))
+	}
+
+	// Wierzchołki o nieparzystym stopniu
+	if doLogs {
+		log.WriteString("Step 2: Finding odd-degree vertices in the MST.\n")
+	}
+	oddVertices := g.FindOddDegreeVertices(mstEdges, &log)
+	if doLogs {
+		log.WriteString(fmt.Sprintf("Odd vertices: %v\n", oddVertices))
+	}
+
+	// Minimalne dopasowanie wierzchołków
+	if doLogs {
+		log.WriteString("Step 3: Finding minimum weight matching for odd-degree vertices.\n")
+	}
+	matching := g.FindMinimumWeightMatching(oddVertices, &log)
+	if doLogs {
+		log.WriteString(fmt.Sprintf("Matching edges: %v\n", matching))
+	}
+
+	// Cykl Eulera -> Cykl Hamiltona
+	if doLogs {
+		log.WriteString("Step 4: Creating Eulerian circuit and converting to Hamiltonian cycle.\n")
+	}
+	hamiltonianCycle := g.CreateHamiltonianCycle(mstEdges, matching, &log)
+	if doLogs {
+		log.WriteString(fmt.Sprintf("Hamiltonian cycle: %v\n", hamiltonianCycle))
+	}
+
+	if logs != nil {
+		*logs = log.String()
+	}
+
+	return hamiltonianCycle, nil
+}
+
+func (g *Graph) FindOddDegreeVertices(edges [][2]int, logs *strings.Builder) []int {
+	degree := make(map[int]int)
+	for _, edge := range edges {
+		degree[edge[0]]++
+		degree[edge[1]]++
+	}
+
+	var oddVertices []int
+	for vertex, deg := range degree {
+		if deg%2 != 0 {
+			oddVertices = append(oddVertices, vertex)
+			if logs != nil {
+				logs.WriteString(fmt.Sprintf("Vertex %d has odd degree (%d).\n", vertex, deg))
+			}
+		}
+	}
+
+	return oddVertices
+}
+
+func (g *Graph) FindMinimumWeightMatching(oddVertices []int, logs *strings.Builder) [][2]int {
+	var matching [][2]int
+	visited := make(map[int]bool)
+
+	for i := 0; i < len(oddVertices); i++ {
+		if visited[oddVertices[i]] {
+			continue
+		}
+
+		minWeight := 1e9
+		var bestMatch int
+		for j := i + 1; j < len(oddVertices); j++ {
+			if visited[oddVertices[j]] {
+				continue
+			}
+
+			weight := g.WeightMatrix[oddVertices[i]-1][oddVertices[j]-1]
+			if weight < minWeight {
+				minWeight = weight
+				bestMatch = oddVertices[j]
+			}
+		}
+
+		matching = append(matching, [2]int{oddVertices[i], bestMatch})
+		visited[oddVertices[i]] = true
+		visited[bestMatch] = true
+		if logs != nil {
+			logs.WriteString(fmt.Sprintf("Matched vertices %d and %d with weight %.2f.\n", oddVertices[i], bestMatch, minWeight))
+		}
+	}
+
+	return matching
+}
+
+func (g *Graph) CreateHamiltonianCycle(mstEdges [][2]int, matching [][2]int, logs *strings.Builder) []int {
+	// Połączenie MST i dopasowania
+	var combinedEdges [][2]int
+	combinedEdges = append(combinedEdges, mstEdges...)
+	combinedEdges = append(combinedEdges, matching...)
+
+	// Tworzenie cyklu Hamiltona (pomijanie powtórzeń)
+	visited := make(map[int]bool)
+	var cycle []int
+	var dfs func(int)
+	dfs = func(v int) {
+		if visited[v] {
+			return
+		}
+		visited[v] = true
+		cycle = append(cycle, v)
+		for _, edge := range combinedEdges {
+			if edge[0] == v {
+				dfs(edge[1])
+			} else if edge[1] == v {
+				dfs(edge[0])
+			}
+		}
+	}
+	dfs(1) // Rozpocznij DFS od dowolnego wierzchołka
+
+	if logs != nil {
+		logs.WriteString(fmt.Sprintf("Generated Hamiltonian cycle: %v\n", cycle))
+	}
+
+	return cycle
+}
+
+type UnionFind struct {
+	parent []int
+	rank   []int
+}
+
+// NewUnionFind initializes a new UnionFind structure with n elements.
+func NewUnionFind(n int) *UnionFind {
+	uf := &UnionFind{
+		parent: make([]int, n),
+		rank:   make([]int, n),
+	}
+	for i := 0; i < n; i++ {
+		uf.parent[i] = i
+	}
+	return uf
+}
+
+// Find returns the root of the set containing x with path compression.
+func (uf *UnionFind) Find(x int) int {
+	if uf.parent[x] != x {
+		uf.parent[x] = uf.Find(uf.parent[x]) // Path compression
+	}
+	return uf.parent[x]
+}
+
+// Union merges the sets containing x and y.
+func (uf *UnionFind) Union(x, y int) {
+	rootX := uf.Find(x)
+	rootY := uf.Find(y)
+
+	if rootX != rootY {
+		// Union by rank
+		if uf.rank[rootX] > uf.rank[rootY] {
+			uf.parent[rootY] = rootX
+		} else if uf.rank[rootX] < uf.rank[rootY] {
+			uf.parent[rootX] = rootY
+		} else {
+			uf.parent[rootY] = rootX
+			uf.rank[rootX]++
+		}
+	}
+}
+
+func (g *Graph) KruskalMST(logs *strings.Builder) ([][2]int, error) {
+	type edge struct {
+		u, v   int
+		weight float64
+	}
+	var edges []edge
+
+	// Zbierz wszystkie krawędzie z wagami
+	for i := 0; i < len(g.WeightMatrix); i++ {
+		for j := i + 1; j < len(g.WeightMatrix[i]); j++ {
+			if g.AdjMatrix[i][j] == 1 {
+				edges = append(edges, edge{i, j, g.WeightMatrix[i][j]})
+			}
+		}
+	}
+
+	// Posortuj krawędzie według wag
+	sort.Slice(edges, func(i, j int) bool {
+		return edges[i].weight < edges[j].weight
+	})
+
+	// UnionFind do zarządzania zbiorami
+	uf := NewUnionFind(len(g.AdjMatrix))
+
+	var mstEdges [][2]int
+
+	// Przetwarzanie krawędzi
+	for _, e := range edges {
+		if uf.Find(e.u) != uf.Find(e.v) {
+			uf.Union(e.u, e.v)
+			mstEdges = append(mstEdges, [2]int{e.u + 1, e.v + 1}) // Indeksy zaczynają się od 1
+			if logs != nil {
+				logs.WriteString(fmt.Sprintf("Added edge (%d, %d) with weight %.2f to MST.\n", e.u+1, e.v+1, e.weight))
+			}
+		}
+
+		// Jeśli mamy wystarczającą liczbę krawędzi, kończymy
+		if len(mstEdges) == len(g.AdjMatrix)-1 {
+			break
+		}
+	}
+
+	return mstEdges, nil
+}
