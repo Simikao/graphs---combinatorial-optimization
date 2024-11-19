@@ -12,7 +12,7 @@ import (
 )
 
 // Eksport grafu do formatu .dot (Graphviz)
-func LoadGraphFromFile(filename string, directed bool) (g.Graph, error) {
+func LoadGraphFromFile(filename string, directed, weighted bool) (g.Graph, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return g.Graph{}, err
@@ -20,6 +20,7 @@ func LoadGraphFromFile(filename string, directed bool) (g.Graph, error) {
 	defer file.Close()
 
 	var edges [][]int
+	var weights [][]float64
 	var maxVertex int
 
 	scanner := bufio.NewScanner(file)
@@ -33,7 +34,7 @@ func LoadGraphFromFile(filename string, directed bool) (g.Graph, error) {
 		u, err1 := strconv.Atoi(parts[0])
 		v, err2 := strconv.Atoi(parts[1])
 		if err1 != nil || err2 != nil {
-			return g.Graph{}, fmt.Errorf("błąd formatu pliku")
+			return g.Graph{}, fmt.Errorf("invalid weight format")
 		}
 
 		edges = append(edges, []int{u, v})
@@ -44,11 +45,28 @@ func LoadGraphFromFile(filename string, directed bool) (g.Graph, error) {
 		if v > maxVertex {
 			maxVertex = v
 		}
+
+		if weighted && len(parts) >= 3 {
+			weight, err := strconv.ParseFloat(parts[2], 64)
+			if err != nil {
+				return g.Graph{}, fmt.Errorf("invalid weight format")
+			}
+			weights = append(weights, []float64{float64(u), float64(v), weight})
+		}
 	}
 
 	graph := g.NewGraph(maxVertex, directed, false)
 	for _, edge := range edges {
 		graph.AddEdge(edge[0], edge[1])
+	}
+
+	if weighted {
+		for _, weight := range weights {
+			err := graph.SetWeight(int(weight[0]), int(weight[1]), weight[2])
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
 	}
 
 	return graph, nil
@@ -62,8 +80,11 @@ func LoadGraphFromDotFile(filename string) (*g.Graph, error) {
 	defer file.Close()
 
 	var edges [][]int
+	var weights [][]float64
 	var maxVertex int
 	directed := false
+	weighted := false
+
 	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
@@ -76,14 +97,14 @@ func LoadGraphFromDotFile(filename string) (*g.Graph, error) {
 
 		if strings.Contains(line, "->") || strings.Contains(line, "--") {
 			parts := strings.FieldsFunc(line, func(r rune) bool {
-				return r == '-' || r == '>' || r == ';'
+				return r == '-' || r == '>' || r == ';' || r == '[' || r == ']'
 			})
 
 			if len(parts) >= 2 {
 				u, err1 := strconv.Atoi(strings.TrimSpace(parts[0]))
 				v, err2 := strconv.Atoi(strings.TrimSpace(parts[1]))
 				if err1 != nil || err2 != nil {
-					return nil, fmt.Errorf("błąd formatu pliku .dot")
+					return nil, fmt.Errorf("invalid .dot file format")
 				}
 
 				edges = append(edges, []int{u, v})
@@ -94,6 +115,17 @@ func LoadGraphFromDotFile(filename string) (*g.Graph, error) {
 				if v > maxVertex {
 					maxVertex = v
 				}
+
+				if strings.Contains(line, "label=") {
+					weighted = true
+					start := strings.Index(line, "\"") + 1
+					end := strings.LastIndex(line, "\"")
+					weight, err := strconv.ParseFloat(line[start:end], 64)
+					if err != nil {
+						return nil, fmt.Errorf("invalid weight format in .dot file")
+					}
+					weights = append(weights, []float64{float64(u), float64(v), weight})
+				}
 			}
 		}
 	}
@@ -101,6 +133,15 @@ func LoadGraphFromDotFile(filename string) (*g.Graph, error) {
 	graph := g.NewGraph(maxVertex, directed, false)
 	for _, edge := range edges {
 		graph.AddEdge(edge[0], edge[1])
+	}
+
+	if weighted {
+		for _, weight := range weights {
+			err := graph.SetWeight(int(weight[0]), int(weight[1]), weight[2])
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
 	}
 
 	return &graph, nil
