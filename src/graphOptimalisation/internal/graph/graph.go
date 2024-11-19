@@ -11,9 +11,11 @@ import (
 var ErrDirectedGraph = errors.New("Cannot use a directed graph in this algorithm")
 
 type Graph struct {
-	AdjMatrix [][]int
-	Directed  bool
-	Edges     [][2]int
+	AdjMatrix    [][]int
+	WeightMatrix [][]float64
+	Directed     bool
+	Weighted     bool
+	Edges        [][2]int
 }
 
 func getEdges(vertices [][]int, directed bool) [][2]int {
@@ -34,6 +36,28 @@ func getEdges(vertices [][]int, directed bool) [][2]int {
 	return edges
 }
 
+func (g *Graph) SetWeight(u, v int, weight float64) error {
+	if !g.Weighted {
+		return fmt.Errorf("cannot set weight on an unweighted graph")
+	}
+
+	u, v = u-1, v-1
+	g.WeightMatrix[u][v] = weight
+	if !g.Directed {
+		g.WeightMatrix[v][u] = weight
+	}
+	return nil
+}
+
+func (g *Graph) GetWeight(u, v int) (float64, error) {
+	if !g.Weighted {
+		return 0, fmt.Errorf("graph is unweighted")
+	}
+
+	u, v = u-1, v-1
+	return g.WeightMatrix[u][v], nil
+}
+
 func NewGraphWithMatrix(vertices [][]int, directed bool) Graph {
 	edges := getEdges(vertices, directed)
 	return Graph{
@@ -43,16 +67,27 @@ func NewGraphWithMatrix(vertices [][]int, directed bool) Graph {
 	}
 }
 
-func NewGraph(vertices int, directed bool) Graph {
+func NewGraph(vertices int, directed, weighted bool) Graph {
 	matrix := make([][]int, vertices)
 	for i := range matrix {
 		matrix[i] = make([]int, vertices)
 	}
 	edges := getEdges(matrix, directed)
+
+	var weights [][]float64
+	if weighted {
+		weights = make([][]float64, vertices)
+		for i := range weights {
+			weights[i] = make([]float64, vertices)
+		}
+	}
+
 	return Graph{
-		AdjMatrix: matrix,
-		Directed:  directed,
-		Edges:     edges,
+		AdjMatrix:    matrix,
+		WeightMatrix: weights,
+		Directed:     directed,
+		Weighted:     weighted,
+		Edges:        edges,
 	}
 }
 
@@ -68,13 +103,20 @@ func (g *Graph) UpdateEdges() {
 	g.Edges = getEdges(g.AdjMatrix, g.Directed)
 }
 
-func (g *Graph) AddEdge(u, v int) *Graph {
+func (g *Graph) AddEdge(u, v int, weight ...float64) *Graph {
 	u = u - 1
 	v = v - 1
 
 	g.AdjMatrix[u][v] = 1
 	if !g.Directed {
 		g.AdjMatrix[v][u] = 1
+	}
+
+	if g.Weighted && len(weight) > 0 {
+		g.WeightMatrix[u][v] = weight[0]
+		if !g.Directed {
+			g.WeightMatrix[v][u] = weight[0]
+		}
 	}
 
 	// Update the list of edges with new edge
@@ -257,22 +299,43 @@ func (g *Graph) ApproximateVertexCover(logs *string) ([]int, error) {
 }
 
 func (g *Graph) String() string {
-	var output []string
+	var sb strings.Builder
 
-	// Add the header row
-	header := []string{"  "}
+	// Nagłówek z indeksami kolumn
+	sb.WriteString("  ") // Puste miejsce dla indeksów wierszy
 	for i := 1; i <= len(g.AdjMatrix); i++ {
-		header = append(header, fmt.Sprintf("%d", i))
+		sb.WriteString(fmt.Sprintf(" %d", i))
 	}
-	output = append(output, strings.Join(header, " "))
+	sb.WriteString("\n")
 
-	// Add each row of the matrix
+	// Macierz sąsiedztwa z indeksami wierszy
 	for i, row := range g.AdjMatrix {
-		rowOutput := []string{fmt.Sprintf("%d", i+1), fmt.Sprintf("%v", row)}
-		output = append(output, strings.Join(rowOutput, " "))
+		sb.WriteString(fmt.Sprintf("%d ", i+1)) // Indeks wiersza
+		for _, val := range row {
+			sb.WriteString(fmt.Sprintf(" %d", val))
+		}
+		sb.WriteString("\n")
 	}
 
-	return strings.Join(output, "\n")
+	// Jeśli graf jest ważony, dodaj macierz wag
+	if g.Weighted {
+		sb.WriteString("\nWeight Matrix:\n")
+		sb.WriteString(" ") // Puste miejsce dla indeksów wierszy
+		for i := 1; i <= len(g.WeightMatrix); i++ {
+			sb.WriteString(fmt.Sprintf("%5d", i))
+		}
+		sb.WriteString("\n")
+
+		for i, row := range g.WeightMatrix {
+			sb.WriteString(fmt.Sprintf("%d ", i+1)) // Indeks wiersza
+			for _, val := range row {
+				sb.WriteString(fmt.Sprintf("%5.1f", val)) // Wagi w formacie dziesiętnym
+			}
+			sb.WriteString("\n")
+		}
+	}
+
+	return sb.String()
 }
 
 func (g *Graph) ToDOT(filename string) error {
@@ -284,12 +347,15 @@ func (g *Graph) ToDOT(filename string) error {
 	}
 	defer file.Close()
 
-	// Nagłówek grafu
+	// Ustaw nagłówek grafu w zależności od typu (skierowany/nieskierowany)
 	var graphType string
+	var edgeConnector string
 	if g.Directed {
 		graphType = "digraph"
+		edgeConnector = "->"
 	} else {
 		graphType = "graph"
+		edgeConnector = "--"
 	}
 
 	fmt.Fprintf(file, "%s G {\n", graphType)
@@ -300,10 +366,12 @@ func (g *Graph) ToDOT(filename string) error {
 			if g.AdjMatrix[i][j] == 1 {
 				indexingFixI := i + 1
 				indexingFixJ := j + 1
-				if g.Directed {
-					fmt.Fprintf(file, "  %d -> %d;\n", indexingFixI, indexingFixJ)
-				} else if i <= j { // aby uniknąć powielania krawędzi w grafie nieskierowanym
-					fmt.Fprintf(file, "  %d -- %d;\n", indexingFixI, indexingFixJ)
+				if g.Directed || i <= j {
+					if g.Weighted {
+						fmt.Fprintf(file, "  %d %s %d [label=\"%.2f\"];\n", indexingFixI, edgeConnector, indexingFixJ, g.WeightMatrix[i][j])
+					} else {
+						fmt.Fprintf(file, "  %d %s %d;\n", indexingFixI, edgeConnector, indexingFixJ)
+					}
 				}
 			}
 		}
